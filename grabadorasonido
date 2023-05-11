@@ -1,0 +1,56 @@
+import java.io.File;
+import java.io.IOException;
+import javax.sound.sampled.*;
+
+public class GrabadoraDeSonido {
+    private static final int SAMPLE_RATE = 44100; // Frecuencia de muestreo en Hz
+    private static final int BITS_PER_SAMPLE = 16; // Profundidad de bits
+    private static final int CHANNELS = 1; // Número de canales (mono)
+    private static final AudioFormat FORMAT = new AudioFormat(SAMPLE_RATE, BITS_PER_SAMPLE, CHANNELS, true, true);
+    private static final AudioFileFormat.Type FILE_TYPE = AudioFileFormat.Type.WAVE;
+    
+    public static void main(String[] args) {
+        TargetDataLine line;
+        AudioInputStream stream = null;
+        AudioFileFormat.Type fileType = FILE_TYPE;
+        File file = new File("grabacion.wav");
+        
+        try {
+            // Obtenemos la entrada de audio
+            DataLine.Info info = new DataLine.Info(TargetDataLine.class, FORMAT);
+            if (!AudioSystem.isLineSupported(info)) {
+                System.err.println("Line not supported");
+                System.exit(-1);
+            }
+            line = (TargetDataLine) AudioSystem.getLine(info);
+            line.open(FORMAT);
+            line.start();
+            
+            // Creamos un flujo de audio de entrada
+            stream = new AudioInputStream(line);
+            
+            // Creamos un hilo para la grabación y guardado del audio en un archivo
+            Thread thread = new Thread() {
+                public void run() {
+                    try {
+                        AudioSystem.write(stream, fileType, file);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+            thread.start();
+            
+            // Esperamos la duración de la grabación
+            Thread.sleep(5000); // Grabamos por 5 segundos
+            
+            // Detenemos la grabación y el hilo
+            line.stop();
+            line.close();
+            stream.close();
+            thread.join();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
